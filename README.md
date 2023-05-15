@@ -3,7 +3,7 @@
 GPTunes is a (yet) unfinished project (but functional), powered by Flask and GPT-3. Indulge
 your senses and broaden your horizons by searching for your favourite songs and
 discover lyrics, unravel meanings, explore song histories and be delighted by
-fascinting, fun facts.
+fascinating, fun facts.
 
 
 ## How to get 
