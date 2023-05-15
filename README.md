@@ -22,3 +22,5 @@ export GENIUS_API_KEY=YOUR_API_KEY_HERE
 ```
 
 ## Example
+
+<img width="1173" alt="Screenshot 2023-05-15 at 18 51 03" src="https://github.com/vandenbroecksebastiaan/GPTunes/assets/101555259/008f518a-daab-4e90-a439-47ddfa22cc78">
