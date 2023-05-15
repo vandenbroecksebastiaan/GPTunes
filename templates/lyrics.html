@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lyrics App</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+
+    <h1>GPTunes</h1>
+
+    <div class="grid-container">
+
+        <div class="left-column">
+            <form action="/" method="GET">
+                <input type="text" name="query" placeholder="Search song" class="search-bar">
+                <button type="submit">Search</button>
+            </form>
+        </div>
+
+        <div class="right-column">
+            <p>Welcome to GPTunes! How to use: search for a song and select a lyric.
+               Wait a few seconds for the AI to generate the content. Don't forget
+               that AIs are not perfect, so the content may not be 100% accurate.
+            </p>
+        </div>
+        
+        <div class="left-column">
+            {% for line in lines %}
+                <p id="lyrics-line" class="lyrics-inline">{{ line }}</p>
+            {% endfor %}
+        </div>
+        
+        <div class="right-column">
+            <h2>The meaning of the line:</h2> 
+            <div id="meaning">Select a line to get started.</div>
+
+            <h2>The history behind the tune:</h2> 
+            <div id="history"></div>
+
+            <h2>Fun facts about the tune:</h2> 
+            <div id="facts"></div>
+
+            <h2>My opinion on the tune:</h2> 
+            <div id="selected-line"></div>
+        </div>
+
+    </div>
+    
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script>
+        // Function to handle line clicked
+        function lineClicked(event) {
+            // Remove the 'selected' class from all lines
+            var lines = document.querySelectorAll('#lyrics-line');
+            lines.forEach(function(line) {
+                line.classList.remove('selected');
+            });
+            
+            // Get the clicked line element
+            var clickedLine = event.target;
+            
+            // Add the 'selected' class to the clicked line
+            clickedLine.classList.add('selected');
+            
+            // Get the text content of the clicked line
+            var lineText = clickedLine.textContent;
+
+            // Update the selected line text in the HTML
+            var selectedLineElement = document.getElementById('selected-line');
+            selectedLineElement.textContent = 'Selected Line: ' + lineText;
+            
+            // Call the lineClicked function
+            axios.post('/line-clicked', { line: lineText })
+                .then(function (response) {
+                    // console.log(response);
+                    updateMeaning(response);
+                    updateHistory(response);
+                    updateFacts(response);
+                })
+                .catch(function (error) {
+                    console.error('Error:', error);
+                });
+        }
+        
+        function updateMeaning(response) {
+            var meaningElement = document.getElementById('meaning');
+            meaningElement.innerHTML = response.data.meaning;
+        }
+
+        function updateHistory(response) {
+            var historyElement = document.getElementById('history');
+            historyElement.innerHTML = response.data.history;
+        }
+
+        function updateFacts(response) {
+            var factsElement = document.getElementById('facts');
+            // Add a linebreak after each element of factsElement
+            factsElement.innerHTML = response.data.facts.join('<br><br>');
+        }
+
+        // Get all the lines in the lyrics
+        var lines = document.querySelectorAll('#lyrics-line');
+
+        // Add click event listeners to each line
+        lines.forEach(function(line) {
+            line.addEventListener('click', lineClicked);
+        });
+    </script>
+
+</body>
+</html>
