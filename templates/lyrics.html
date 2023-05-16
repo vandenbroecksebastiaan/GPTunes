@@ -12,8 +12,8 @@
 
         <div class="left-column">
             <form action="/" method="GET">
-                <input type="text" name="query" placeholder="Search song" class="search-bar">
-                <button type="submit">Search</button>
+                <input type="text" name="query" placeholder="Search song" class="search-bar" value="{{ search_query }}">
+                <button type="button">Search</button>
             </form>
         </div>
 
@@ -35,19 +35,32 @@
             <div id="meaning">Select a line to get started.</div>
 
             <h2>The history behind the tune:</h2> 
-            <div id="history"></div>
+            <div id="history">Loading...</div>
 
             <h2>Fun facts about the tune:</h2> 
-            <div id="facts"></div>
+            <div id="facts">Loading...</div>
 
-            <h2>My opinion on the tune:</h2> 
-            <div id="selected-line"></div>
+            <h2>Most iconic lines:</h2> 
+            <div id="iconic-lines">Loading...</div>
         </div>
 
     </div>
     
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script>
+
+        // Function that gets information about the song
+        function getSongInfo() {
+            axios.post('/song-info')
+                .then(function (response) {
+                    updateHistory(response);
+                    updateFacts(response);
+                    updateIconicLines(response);
+                })
+        }
+        
+        getSongInfo();
+
         // Function to handle line clicked
         function lineClicked(event) {
             // Remove the 'selected' class from all lines
@@ -65,17 +78,10 @@
             // Get the text content of the clicked line
             var lineText = clickedLine.textContent;
 
-            // Update the selected line text in the HTML
-            var selectedLineElement = document.getElementById('selected-line');
-            selectedLineElement.textContent = 'Selected Line: ' + lineText;
-            
             // Call the lineClicked function
             axios.post('/line-clicked', { line: lineText })
                 .then(function (response) {
-                    // console.log(response);
                     updateMeaning(response);
-                    updateHistory(response);
-                    updateFacts(response);
                 })
                 .catch(function (error) {
                     console.error('Error:', error);
@@ -92,10 +98,15 @@
             historyElement.innerHTML = response.data.history;
         }
 
+        function updateIconicLines(response) {
+            var iconicLinesElement = document.getElementById('iconic-lines');
+            iconicLinesElement.innerHTML = response.data.iconic_lines.join('<br>');
+        }
+
         function updateFacts(response) {
             var factsElement = document.getElementById('facts');
             // Add a linebreak after each element of factsElement
-            factsElement.innerHTML = response.data.facts.join('<br><br>');
+            factsElement.innerHTML = response.data.facts.join('<br>');
         }
 
         // Get all the lines in the lyrics
