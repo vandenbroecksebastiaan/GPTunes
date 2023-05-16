@@ -13,29 +13,33 @@ from prompts import (
     get_meaning_prompt,
     get_history_prompt,
     get_facts_prompt,
-    get_iconic_lines_prompt
+    get_iconic_lines_prompt,
+    get_impact_prompt
 )
 
 
 app = flask.Flask(__name__)
 
 # TODO: find a way to make this object-oriented
-# TODO: put the most iconic lines of the song in a different color
 # TODO: give the LLM a personality
 # TODO: which artists have used iconic lines from the searched song in their own
 #       songs?
 # TODO: find the impact of the most iconic lines of the song on the hip hop
 #       community
 # TODO: add song and artist statistics
+# TODO: make a section "behind the artist" that gives information about the
+#       artist
 
 # Route for displaying the lyrics
 @app.route("/", methods=["GET", "POST"])
-def lyrics():
+def lyrics() -> str:
     song_name_query = flask.request.args.get('query', 'The world is yours')
     song = genius.search_song(song_name_query)
+    
     global song_title, artist, song_lyrics
     song_lyrics = song.lyrics
     song_title = song.title
+    album_art_url = song.header_image_url
     artist = song.primary_artist.name
     song_lyrics = song_lyrics.split("\n")[1:]
     
@@ -43,10 +47,11 @@ def lyrics():
 
     # Pass the lyrics to the HTML template
     return flask.render_template('lyrics.html', lines=song_lyrics,
-                                 search_query=song_name_query)
+                                 search_query=song_name_query,
+                                 album_art_url=album_art_url)
     
 @app.route("/get-lyrics", methods=["GET", "POST"])
-def get_lyrics():
+def get_lyrics() -> flask.Response:
     print("get_lyrics called")
     global song_lyrics
     return flask.jsonify({"status": "success", "lyrics": song_lyrics})
@@ -68,7 +73,7 @@ def song_searched() -> flask.Response:
     history = pool.apply_async(get_history)
     facts = pool.apply_async(get_facts)
     iconic_lines = pool.apply_async(get_iconic_lines)
-    history = history.get(); facts = facts.get(); iconic_lines = iconic_lines.get()
+    history = history.get(); facts = facts.get(); iconic_lines = iconic_lines.get();
     pool.close(); pool.join();
     
     iconic_lines = iconic_lines.split("\n")

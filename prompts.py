@@ -79,3 +79,15 @@ END EXAMPLE
 """
     for line in lyrics: prompt += f"\n{line}"
     return prompt
+
+def get_impact_prompt(song: str, artist: str) -> str:
+    """Generates a prompt to get the impact of a song on the music industry."""
+    prompt = f"""
+I want you to act as an extremely intelligent music lover who teaches others
+about the history behind the music they listen to.
+You are renowned for knowing the impact of songs on the music industry.
+If the song did not have a big impact answer [NO IMPACT].
+Respect the formatting shown in the examples.
+What is the impact of the song {song} by {artist} on the music industry?
+"""
+    return prompt
