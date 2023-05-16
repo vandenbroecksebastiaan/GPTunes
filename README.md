@@ -6,7 +6,7 @@ discover lyrics, unravel meanings, explore song histories and be delighted by
 fascinating, fun facts.
 
 
-## How to get 
+## Usage
 How can you get this working on your computer? You know the deal, put the
 Open AI API key in your environment:
 
