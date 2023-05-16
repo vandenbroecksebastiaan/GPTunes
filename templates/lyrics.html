@@ -24,11 +24,15 @@
             </p>
         </div>
         
+        <!--
         <div class="left-column">
             {% for line in lines %}
                 <p id="lyrics-line" class="lyrics-inline">{{ line }}</p>
             {% endfor %}
         </div>
+        -->
+        
+        <div id="lyrics"></div>
         
         <div class="right-column">
             <h2>The meaning of the line:</h2> 
@@ -48,6 +52,30 @@
 
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script>
+        
+        function addLyrics() {
+            var lyricsElement = document.getElementById("lyrics");
+            
+            // Get the lines from the server
+            axios.post("/get-lyrics")
+                .then(function (response) {
+                    // Add the lines to the lyricsElement
+                    lines = response.data.lyrics;
+                    // For every element in lines, add a <p> element to the lyricsElement
+                    lines.forEach(function(line) {
+                        var lineElement = document.createElement("p");
+                        lineElement.setAttribute("id", "lyrics-line");
+                        lineElement.setAttribute("class", "lyrics-inline");
+                        lineElement.innerHTML = line;
+                        lyricsElement.appendChild(lineElement);
+                    });
+                })
+                .catch(function (error) {
+                    console.error('Error:', error);
+                });
+        }
+        
+        addLyrics();
 
         // Function that gets information about the song
         function getSongInfo() {
@@ -57,6 +85,49 @@
                     updateFacts(response);
                     updateIconicLines(response);
                 })
+        }
+
+        function updateHistory(response) {
+            var historyElement = document.getElementById('history');
+            historyElement.innerHTML = response.data.history;
+        }
+
+        function updateIconicLines(response) {
+            var iconicLinesElement = document.getElementById('iconic-lines');
+            iconicLinesElement.innerHTML = response.data.iconic_lines.join('<br>');
+            
+            // Iterate over #lyrics and make the line red if it is an iconic line
+            var lines = document.querySelectorAll('#lyrics');
+            var iconic_lines = response.data.iconic_lines;
+
+            var iconic_lines = iconic_lines.map(function(element) {
+                return element.substring(3)
+                              .replace('"', '').replace('"', '')
+                              .toLowerCase();
+            });
+            
+            console.log(iconic_lines);
+
+            // Select lyrics by id
+            var lyrics = document.getElementById("lyrics");
+            // Iterate over children of lyrics
+            var lines = lyrics.children;
+            var lines = Array.from(lines);
+
+            lines.forEach(function(line) {
+                if (iconic_lines.includes(line.textContent.toLowerCase())) {
+                    console.log("ITERATION");
+                    console.log(line.textContent);
+                    line.classList.add('iconic');
+                    console.log(line);
+                }
+            });
+        }
+
+        function updateFacts(response) {
+            var factsElement = document.getElementById('facts');
+            // Add a linebreak after each element of factsElement
+            factsElement.innerHTML = response.data.facts.join('<br>');
         }
         
         getSongInfo();
@@ -93,24 +164,8 @@
             meaningElement.innerHTML = response.data.meaning;
         }
 
-        function updateHistory(response) {
-            var historyElement = document.getElementById('history');
-            historyElement.innerHTML = response.data.history;
-        }
-
-        function updateIconicLines(response) {
-            var iconicLinesElement = document.getElementById('iconic-lines');
-            iconicLinesElement.innerHTML = response.data.iconic_lines.join('<br>');
-        }
-
-        function updateFacts(response) {
-            var factsElement = document.getElementById('facts');
-            // Add a linebreak after each element of factsElement
-            factsElement.innerHTML = response.data.facts.join('<br>');
-        }
-
         // Get all the lines in the lyrics
-        var lines = document.querySelectorAll('#lyrics-line');
+        var lines = document.querySelectorAll('#lyrics');
 
         // Add click event listeners to each line
         lines.forEach(function(line) {

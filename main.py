@@ -1,12 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
-
+import flask
 import os
 import openai
 open_ai_key = os.environ.get("OPENAI_API_KEY")
 openai.api_key = open_ai_key
 from multiprocessing import Pool
 from typing import List
-
 from lyricsgenius import Genius
 genius_api_key = os.environ.get("GENIUS_API_KEY")
 genius = Genius(genius_api_key)
@@ -19,20 +17,21 @@ from prompts import (
 )
 
 
-app = Flask(__name__)
+app = flask.Flask(__name__)
 
 # TODO: find a way to make this object-oriented
 # TODO: put the most iconic lines of the song in a different color
 # TODO: give the LLM a personality
-# TODO: get history, facts and iconic lines should be when the song is selected
-#       and not the line
 # TODO: which artists have used iconic lines from the searched song in their own
 #       songs?
+# TODO: find the impact of the most iconic lines of the song on the hip hop
+#       community
+# TODO: add song and artist statistics
 
 # Route for displaying the lyrics
 @app.route("/", methods=["GET", "POST"])
 def lyrics():
-    song_name_query = request.args.get('query', 'The world is yours')
+    song_name_query = flask.request.args.get('query', 'The world is yours')
     song = genius.search_song(song_name_query)
     global song_title, artist, song_lyrics
     song_lyrics = song.lyrics
@@ -43,19 +42,26 @@ def lyrics():
     print(f"song name: {song_title}, artist: {artist}")
 
     # Pass the lyrics to the HTML template
-    return render_template('lyrics.html', lines=song_lyrics, search_query=song_name_query)
+    return flask.render_template('lyrics.html', lines=song_lyrics,
+                                 search_query=song_name_query)
+    
+@app.route("/get-lyrics", methods=["GET", "POST"])
+def get_lyrics():
+    print("get_lyrics called")
+    global song_lyrics
+    return flask.jsonify({"status": "success", "lyrics": song_lyrics})
 
 # Route for handling the line clicked information
 @app.route("/line-clicked", methods=["POST"])
-def line_clicked():
+def line_clicked() -> flask.Response:
     print("Getting the meaning behind the clicked line B)")
-    request_data = request.get_json()
+    request_data = flask.request.get_json()
     clicked_line = request_data["line"]
     meaning = get_meaning(clicked_line)
-    return jsonify({"status": "success", "meaning": meaning})
+    return flask.jsonify({"status": "success", "meaning": meaning})
     
 @app.route("/song-info", methods=["GET", "POST"])
-def song_searched():
+def song_searched() -> flask.Response:
     print("getting the history, facts and iconic lines >:)")
 
     pool = Pool(10)
@@ -66,7 +72,7 @@ def song_searched():
     pool.close(); pool.join();
     
     iconic_lines = iconic_lines.split("\n")
-    return jsonify({"status": "success", "history": history, "facts": facts,
+    return flask.jsonify({"status": "success", "history": history, "facts": facts,
                     "iconic_lines": iconic_lines})
 
 def get_meaning(clicked_line="") -> str:

@@ -101,6 +101,10 @@ button:hover {
     color: #ffffff;
 }
 
+.iconic {
+    color: #ff79c6;
+}
+
 @media (max-width: 600px) {
     .grid-container {
         grid-template-columns: 1fr;

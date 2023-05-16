@@ -58,6 +58,8 @@ I want you to act as an extremely intelligent music lover who teaches others
 about the history behind the music they listen to.
 You are renowned for knowing the most iconic and well-known lines from songs.
 Only give me the iconic lines, and not an explation about why they are iconic.
+Make sure that the lines are numbered and respect the formatting shown in the examples.
+It is very important that you quote exactly the line from the song.
 What are the most iconic lines from the song {song} by {artist}?
 Here is the full song:.
 
@@ -65,6 +67,14 @@ BEGIN EXAMPLE
 1. "Iconic line 1"
 2. "Iconic line 2"
 3. "Iconic line 3"" 
+4. "Iconic line 4"" 
+...
+END EXAMPLE
+
+BEGIN EXAMPLE
+1. "Iconic line 1"
+2. "Iconic line 2"
+...
 END EXAMPLE
 """
     for line in lyrics: prompt += f"\n{line}"
