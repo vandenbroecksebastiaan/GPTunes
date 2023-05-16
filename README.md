@@ -23,4 +23,6 @@ export GENIUS_API_KEY=YOUR_API_KEY_HERE
 
 ## Example
 
-<img width="1173" alt="Screenshot 2023-05-15 at 18 51 03" src="https://github.com/vandenbroecksebastiaan/GPTunes/assets/101555259/008f518a-daab-4e90-a439-47ddfa22cc78">
+This is what GPTunes has to say about The World Is Yours by Nas:
+
+<img width="1216" alt="Screenshot 2023-05-16 at 18 23 08" src="https://github.com/vandenbroecksebastiaan/GPTunes/assets/101555259/c4050150-2635-49a5-9a5a-f1f4c2fe0c0c">
