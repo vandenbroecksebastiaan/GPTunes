@@ -48,7 +48,7 @@ def lyrics():
 # Route for handling the line clicked information
 @app.route("/line-clicked", methods=["POST"])
 def line_clicked():
-    print("Getting the meaning behind the ckicked line B)")
+    print("Getting the meaning behind the clicked line B)")
     request_data = request.get_json()
     clicked_line = request_data["line"]
     meaning = get_meaning(clicked_line)
@@ -57,13 +57,14 @@ def line_clicked():
 @app.route("/song-info", methods=["GET", "POST"])
 def song_searched():
     print("getting the history, facts and iconic lines >:)")
-    # Get the history, facts and iconic lines of the song
-    pool = Pool(3)
+
+    pool = Pool(10)
     history = pool.apply_async(get_history)
     facts = pool.apply_async(get_facts)
     iconic_lines = pool.apply_async(get_iconic_lines)
     history = history.get(); facts = facts.get(); iconic_lines = iconic_lines.get()
     pool.close(); pool.join();
+    
     iconic_lines = iconic_lines.split("\n")
     return jsonify({"status": "success", "history": history, "facts": facts,
                     "iconic_lines": iconic_lines})
@@ -78,23 +79,29 @@ def get_meaning(clicked_line="") -> str:
 def get_history() -> str:
     """Gets the history behind the song."""
     global song_title, artist
+    print("started history")
     prompt = get_history_prompt(song_title, artist)
     response = _gpt_call(prompt)
+    print("finished history")
     return response
 
 def get_facts() -> List[str]:
     """Gets the facts about the song."""
     global song_title, artist
+    print("started facts")
     prompt = get_facts_prompt(song_title, artist)
     response = _gpt_call(prompt)
     response = response.split("\n")
+    print("finished facts")
     return response
 
 def get_iconic_lines() -> List[str]:
     """Gets the most iconic lines of the song."""
     global song_title, artist, song_lyrics
+    print("started iconic lines")
     prompt = get_iconic_lines_prompt(lyrics=song_lyrics, song=song_title, artist=artist)
     response = _gpt_call(prompt)
+    print("finished iconic lines")
     return response
 
 def _gpt_call(prompt: str, max_tokens: int = 500, model: str = "gpt-3.5-turbo"):
