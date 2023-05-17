@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lyrics App</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    
+    <div class="grid-container">
+
+        <div class="left-column">
+            <h1>GPTunes</h1>
+        </div>
+
+        <div class="right-column button-container">
+            <a href="/"><button class="navigation-button">Go to First Page</button></a>
+            <a href="/second-page"><button class="navigation-button">Go to Second Page</button></a>
+        </div>
+    
+        <div class="left-column">
+            <form action="/search-albums" method="GET">
+                <input type="text" name="query-album-1" placeholder="Search album 1"
+                       class="search-bar" value="{{ album_1_name }}">
+                <input type="text" name="query-album-2" placeholder="Search album 2"
+                       class="search-bar" value="{{ album_2_name }}">
+                <button>Search</button>
+                <p>Search status: {{ search_status }}</p>
+            </form>
+        </div>
+        
+        <div class="right-column">
+            <form action="/make-embedding">
+                <button id="make-embedding-button">Make embedding</button>
+            </form>
+            <div id="image-container"></div>
+        </div>
+
+    </div>
+    
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#make-embedding-button').click(function(e) {
+                $('#make-embedding-button').text("Loading embedding...");
+                e.preventDefault();
+                $.ajax({
+                    url: '/make-embedding',
+                    type: 'POST',
+                    success: function(response) {
+                        var imgElement = document.createElement('img');
+                        imgElement.src = 'static/images/tsne.png';
+                        imgElement.id = 'tsne-image';
+                        var imageContainer = document.getElementById('image-container');
+                        imageContainer.appendChild(imgElement);
+                        $('#make-embedding-button').text("Make embedding");
+                    }
+                });
+          });
+        });
+
+    </script>
+
+</body>
+</html>

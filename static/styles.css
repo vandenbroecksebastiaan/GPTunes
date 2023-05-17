@@ -59,6 +59,34 @@ button:hover {
     margin-bottom: 10px;
 }
 
+.left-column {
+    flex: 1;
+    width: 100%;
+  }
+  
+.right-column {
+    flex: 1;
+    max-width: 100%;
+    align-items: flex-start;
+}
+
+.button-container {
+    margin-top: 30px;
+    display: flex;
+    gap: 10px;
+}
+
+#image-container {
+    width: 100%;
+    overflow: hidden; /* Hide any overflow */
+  }
+  
+#tsne-image {
+  max-width: 100%;
+  max-height: 100%;
+  margin: 0 auto;
+}
+  
 .lyrics-inline {
     white-space: pre-wrap; 
     font-family: 'Courier New', Courier, monospace;
@@ -72,18 +100,6 @@ button:hover {
     color: #50fa7b;
 }
 
-.lyrics-container {
-    display: flex;
-}
-
-.left-column {
-    flex: 1;
-}
-
-.right-column {
-    flex: 1;
-}
-
 .grid-container {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -92,7 +108,7 @@ button:hover {
 }
 
 .search-bar {
-    margin-top: 20px;
+    padding-top: 20px;
     padding: 10px;
     width: 90%;
     border: none;
