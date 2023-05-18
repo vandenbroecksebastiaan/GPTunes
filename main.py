@@ -6,12 +6,10 @@ open_ai_key = os.environ.get("OPENAI_API_KEY")
 openai.api_key = open_ai_key
 from multiprocessing import Pool
 from typing import List, Tuple
-from lyricsgenius import Genius
-genius_api_key = os.environ.get("GENIUS_API_KEY")
-genius = Genius(genius_api_key)
 from sklearn.manifold import TSNE
 import numpy as np
 import matplotlib.pyplot as plt
+
 
 from prompts import (
     get_meaning_prompt,
@@ -21,6 +19,7 @@ from prompts import (
     get_impact_prompt
 )
 
+genius_api_key = os.environ.get("GENIUS_API_KEY")
 
 app = flask.Flask(__name__, template_folder="templates")
 
@@ -40,6 +39,10 @@ app = flask.Flask(__name__, template_folder="templates")
 @app.route("/", methods=["GET", "POST"])
 def home_page() -> str:
     song_name_query = flask.request.args.get('query', 'The world is yours')
+    from lyricsgenius import Genius
+    access_token = os.environ.get("GENIUS_API_KEY")
+    genius = Genius(access_token, timeout=10, sleep_time=0.1, verbose=True,
+                    retries=5)
     song = genius.search_song(song_name_query)
     
     global song_title, artist, song_lyrics
@@ -120,14 +123,9 @@ def get_iconic_lines() -> List[str]:
     print("finished iconic lines")
     return response
 
-# ------------------------------------------------------------------------------
-# Second page: create an embedding from the lyrics of two albums and visualize
-# them
-
-# Route for the second page
-@app.route("/second-page", methods=["GET", "POST"])
+@app.route("/album-embedding", methods=["GET", "POST"])
 def second_page() -> str:
-    return flask.render_template("second_page.html", album_1_name="Illmatic",
+    return flask.render_template("album_embedding.html", album_1_name="Illmatic",
                                  album_2_name="Yeezus", search_status="Not done")
 
 @app.route("/search-albums", methods=["GET", "POST"])
@@ -136,74 +134,74 @@ def search_albums() -> str:
     album_1_name = flask.request.args.get("query-album-1", "Illmatic")
     album_2_name = flask.request.args.get("query-album-2", "Yeezus")
     
-    return flask.render_template("second_page.html", album_1_name=album_1_name,
+    return flask.render_template("album_embedding.html", album_1_name=album_1_name,
                                   album_2_name=album_2_name, search_status="Done")
 
 def get_lyrics_from_album(album_name: str) -> List[Tuple[str, str]]:
     """Gets the lyrics from an album."""
     # TODO: delete everything from the lyrics that is not a song
-    genius = Genius(genius_api_key)
+    from lyricsgenius import Genius
+    access_token = os.environ.get("GENIUS_API_KEY")
+    genius = Genius(access_token, timeout=10, sleep_time=0.1, verbose=True,
+                    retries=5)
     album = genius.search_album(album_name)
-    print("just after search album:", album.full_title)
     album_json = album.to_json()
     album_json = json.loads(album_json)
     album_tracks = album_json["tracks"]
     album_lyrics = [track["song"]["lyrics"] for track in album_tracks]
+    album_lyrics = ["\n".join([line for line in text.split("\n")
+                    if "[" not in line and "]" not in line])
+                    for text in album_lyrics]
     album_song_titles = [track["song"]["title"] for track in album_tracks]
-    return [(i, j) for i, j in zip(album_song_titles, album_lyrics)]
+    return album_song_titles, album_lyrics
 
 @app.route("/make-embedding", methods=["GET", "POST"])
 def make_embedding_visualization() -> None:
     """Makes the visualization of the embedding."""
     # Get the lyrics
     global album_1_name, album_2_name
+
     print(album_1_name, album_2_name)
-    print("before pool")
-    with Pool(10) as pool: results = pool.map(get_lyrics_from_album,
-                                              [album_1_name, album_2_name])
-    print("after pool")
-    album_1_info, album_2_info = results
-    album_1_song_names, album_1_lyrics = zip(*album_1_info)
-    album_2_song_names, album_2_lyrics = zip(*album_2_info)
+    album_1_song_names, album_1_lyrics = get_lyrics_from_album(album_1_name)
+    album_2_song_names, album_2_lyrics = get_lyrics_from_album(album_2_name)
+    
+    song_names = album_1_song_names + album_2_song_names
+    album_lyrics = album_1_lyrics + album_2_lyrics
 
     # Get the embeddings
-    album_1_embeddings = np.array([_gpt_embedding_call(lyrics) for lyrics in album_1_lyrics])
-    album_2_embeddings = np.array([_gpt_embedding_call(lyrics) for lyrics in album_2_lyrics])
-
-    embeddings = np.vstack((album_1_embeddings, album_2_embeddings))
-    song_names = album_1_song_names + album_2_song_names
-
-    print(album_1_embeddings.shape)
-    print(album_2_embeddings.shape)
-    print(embeddings.shape)
-
+    album_embeddings = np.array([_gpt_embedding_call(i) for i in album_lyrics])
+    print(album_embeddings.shape)
     # Dim reduction
-    embeddings = TSNE(n_components=2, perplexity=5).fit_transform(embeddings)
+    red_embeddings = TSNE(n_components=2, perplexity=3)\
+                         .fit_transform(album_embeddings)
+    print(red_embeddings.shape)
+    
+    print(red_embeddings[:len(album_1_song_names), 0].shape)
+    print(red_embeddings[:len(album_1_song_names), 1].shape)
+
+    print(red_embeddings[len(album_2_song_names):, 0].shape)
+    print(red_embeddings[len(album_2_song_names):, 1].shape)
 
     # Make and save plot
     fig, ax = plt.subplots(figsize=(10, 10))
     fig.patch.set_facecolor('white')
-    ax.scatter(embeddings[:len(album_1_embeddings), 0], embeddings[:len(album_1_embeddings), 1],
-                c="tab:blue", label=album_1_name)
-    ax.scatter(embeddings[len(album_2_embeddings):, 0], embeddings[len(album_2_embeddings):, 1],
-                c="tab:orange", label=album_2_name)
-    ax.legend()
+    ax.scatter(red_embeddings[:len(album_1_song_names), 0],
+               red_embeddings[:len(album_1_song_names), 1],
+               c="tab:blue", label=album_1_name)
+    ax.scatter(red_embeddings[len(album_1_song_names):, 0],
+               red_embeddings[len(album_1_song_names):, 1],
+               c="tab:orange", label=album_2_name)
     ax.set_xticks([])
     ax.set_yticks([])
     
-    for x, y, song_name in zip(embeddings[:, 0], embeddings[:, 1], song_names):
-        ax.annotate(song_name, (x, y), fontsize=10, ha="center", va="bottom")
+    for x, y, song_name in zip(red_embeddings[:, 0], red_embeddings[:, 1], song_names):
+        ax.annotate(song_name, (x, y), fontsize=10, ha="center", va="bottom", c="white")
 
-    ax.set_title("TSNE visualization of the lyrics of two albums")
-    plt.savefig("static/images/tsne.png", bbox_inches="tight", dpi=300) 
-
-    # import plotly.express as px
-    # fig = px.scatter(x=range(10), y=range(10), width=500, height=500)
-    # fig.write_html("static/images/tsne.html", full_html=False, include_plotlyjs="cdn")
+    ax.set_title("")
+    plt.savefig("static/images/tsne.png", bbox_inches="tight", dpi=300,
+                transparent=True)
 
     return flask.jsonify({"status": "success"})
-
-
 
 # ------------------------------------------------------------------------------
 
@@ -219,7 +217,7 @@ def _gpt_chat_call(prompt: str, max_tokens: int = 500, model: str = "gpt-3.5-tur
         except openai.error.RateLimitError:
             print(f"Error in GPT-3 call: Rate limit exceeded. Trying again... {idx}")
             
-def _gpt_embedding_call(prompt: str, model: str = "text-embedding-ada-002"):
+def _gpt_embedding_call(prompt: List[str], model: str = "text-embedding-ada-002"):
     for idx in range(10):
         try:
             response = openai.Embedding.create(
@@ -229,6 +227,7 @@ def _gpt_embedding_call(prompt: str, model: str = "text-embedding-ada-002"):
             return response['data'][0]['embedding']
         except openai.error.RateLimitError:
             print(f"Error in GPT-3 call: Rate limit exceeded. Trying again... {idx}")
-            
 
-if __name__ == '__main__': app.run(debug=True)
+if __name__ == '__main__':
+    app.run(debug=True)
+    # get_lyrics_from_album("Yeezus")

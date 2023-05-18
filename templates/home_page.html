@@ -5,17 +5,20 @@
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    
-    <div class="grid-container">
 
-    <div>
-        <h1>GPTunes</h1>
-    </div>
+    <div class="header">
+        <div style="width: 17%;border-right: 2px solid #ffffff;">
+            <h1>GPTunes</h1> 
+        </div>
+        
+        <div style="float: left;">
+            <p class="slogan">Unleash musical wonders</p>
+        </div>
 
-    <div>
-        <a href="/second-page"><button class="navigation-button">Go to Second Page</button></a>
-    </div>
-    
+        <div class="button-container">
+            <a href="/" class="navigation-button" style="border-left: 2px solid #ffffff;"><button class="navigation-button">Lyrics</button></a>
+            <a href="/album-embedding" class="navigation-button"><button class="navigation-button">Album embedding</button></a>
+        </div>
     </div>
 
     <div class="grid-container">
@@ -24,7 +27,7 @@
             <form action="/" method="GET">
                 <input type="text" name="query" placeholder="Search song"
                        class="search-bar" value="{{ search_query }}">
-                <button>Search</button>
+                <button class="other-button">Search</button>
             </form>
         </div>
 
