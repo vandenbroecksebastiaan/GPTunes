@@ -6,27 +6,24 @@ open_ai_key = os.environ.get("OPENAI_API_KEY")
 openai.api_key = open_ai_key
 from multiprocessing import Pool
 from typing import List, Tuple
-from sklearn.manifold import TSNE
 import numpy as np
 import matplotlib.pyplot as plt
-
+import umap
 
 from prompts import (
     get_meaning_prompt,
     get_history_prompt,
     get_facts_prompt,
-    get_iconic_lines_prompt,
-    get_impact_prompt
+    get_iconic_lines_prompt
 )
 
 genius_api_key = os.environ.get("GENIUS_API_KEY")
 
 app = flask.Flask(__name__, template_folder="templates")
 
-# TODO: find a way to make this object-oriented
-# TODO: give the LLM a personality
 # TODO: which artists have used iconic lines from the searched song in their own
 #       songs?
+# https://developer.musixmatch.com/documentation/api-reference/matcher-track-get
 # TODO: find the impact of the most iconic lines of the song on the hip hop
 #       community
 # TODO: add song and artist statistics
@@ -97,30 +94,24 @@ def get_meaning(clicked_line="") -> str:
 def get_history() -> str:
     """Gets the history behind the song."""
     global song_title, artist
-    print("started history")
     prompt = get_history_prompt(song_title, artist)
     response = _gpt_chat_call(prompt)
-    print("finished history")
     return response
 
 def get_facts() -> List[str]:
     """Gets the facts about the song."""
     global song_title, artist
-    print("started facts")
     prompt = get_facts_prompt(song_title, artist)
     response = _gpt_chat_call(prompt)
     response = response.split("\n")
-    print("finished facts")
     return response
 
 def get_iconic_lines() -> List[str]:
     """Gets the most iconic lines of the song."""
     global song_title, artist, song_lyrics
-    print("started iconic lines")
     prompt = get_iconic_lines_prompt(lyrics=song_lyrics, song=song_title,
                                      artist=artist)
     response = _gpt_chat_call(prompt)
-    print("finished iconic lines")
     return response
 
 @app.route("/album-embedding", methods=["GET", "POST"])
@@ -145,6 +136,7 @@ def get_lyrics_from_album(album_name: str) -> List[Tuple[str, str]]:
     genius = Genius(access_token, timeout=10, sleep_time=0.1, verbose=True,
                     retries=5)
     album = genius.search_album(album_name)
+    print(album.full_title, album.artist)
     album_json = album.to_json()
     album_json = json.loads(album_json)
     album_tracks = album_json["tracks"]
@@ -155,13 +147,11 @@ def get_lyrics_from_album(album_name: str) -> List[Tuple[str, str]]:
     album_song_titles = [track["song"]["title"] for track in album_tracks]
     return album_song_titles, album_lyrics
 
-@app.route("/make-embedding", methods=["GET", "POST"])
-def make_embedding_visualization() -> None:
+@app.route("/make-lyric-embedding", methods=["GET", "POST"])
+def make_lyric_embedding_visualization() -> None:
     """Makes the visualization of the embedding."""
     # Get the lyrics
     global album_1_name, album_2_name
-
-    print(album_1_name, album_2_name)
     album_1_song_names, album_1_lyrics = get_lyrics_from_album(album_1_name)
     album_2_song_names, album_2_lyrics = get_lyrics_from_album(album_2_name)
     
@@ -170,20 +160,13 @@ def make_embedding_visualization() -> None:
 
     # Get the embeddings
     album_embeddings = np.array([_gpt_embedding_call(i) for i in album_lyrics])
-    print(album_embeddings.shape)
     # Dim reduction
-    red_embeddings = TSNE(n_components=2, perplexity=3)\
-                         .fit_transform(album_embeddings)
-    print(red_embeddings.shape)
-    
-    print(red_embeddings[:len(album_1_song_names), 0].shape)
-    print(red_embeddings[:len(album_1_song_names), 1].shape)
-
-    print(red_embeddings[len(album_2_song_names):, 0].shape)
-    print(red_embeddings[len(album_2_song_names):, 1].shape)
+    red_embeddings = umap.UMAP(n_neighbors=5).fit_transform(album_embeddings)
+    red_embeddings = (red_embeddings - red_embeddings.mean(axis=0))\
+                     / red_embeddings.std(axis=0)
 
     # Make and save plot
-    fig, ax = plt.subplots(figsize=(10, 10))
+    fig, ax = plt.subplots(figsize=(7, 7))
     fig.patch.set_facecolor('white')
     ax.scatter(red_embeddings[:len(album_1_song_names), 0],
                red_embeddings[:len(album_1_song_names), 1],
@@ -194,8 +177,13 @@ def make_embedding_visualization() -> None:
     ax.set_xticks([])
     ax.set_yticks([])
     
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    
     for x, y, song_name in zip(red_embeddings[:, 0], red_embeddings[:, 1], song_names):
-        ax.annotate(song_name, (x, y), fontsize=10, ha="center", va="bottom", c="white")
+        ax.annotate(song_name, (x, y), fontsize=8, ha="center", va="bottom", c="white")
 
     ax.set_title("")
     plt.savefig("static/images/tsne.png", bbox_inches="tight", dpi=300,
@@ -203,7 +191,21 @@ def make_embedding_visualization() -> None:
 
     return flask.jsonify({"status": "success"})
 
-# ------------------------------------------------------------------------------
+@app.route("/make-music-embedding", methods=["GET", "POST"])
+def make_music_embedding_visualization() -> None:
+    from music2vec import MusicEmbedder
+    global album_1_name, album_2_name
+
+    embedder = MusicEmbedder([album_1_name, album_2_name])
+    # Sometimes there are no previews available for an album
+    preview_status = embedder.download_songs()
+    print(preview_status)
+    if preview_status == "error": return flask.jsonify({"status": "error"})
+    embedder.to_embedding()
+    embedder.reduce_embeddings()
+    embedder.make_visualization()
+
+    return flask.jsonify({"status": "success"})
 
 def _gpt_chat_call(prompt: str, max_tokens: int = 500, model: str = "gpt-3.5-turbo"):
     for idx in range(10):

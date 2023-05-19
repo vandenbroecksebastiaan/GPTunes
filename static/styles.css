@@ -5,6 +5,8 @@ body {
     margin-left: 0px;
     margin-right: 0px;
     font-family: Arial, sans-serif;
+    max-width: 1500px;
+    margin: 0 auto;
 }
 
 h1 {
@@ -41,7 +43,7 @@ button:hover {
 .left-column {
     flex: 1;
     width: 100%;
-  }
+}
   
 .right-column {
     flex: 1;
@@ -80,9 +82,7 @@ button:hover {
     font-size: 2em;
     margin-top: 10px;
     margin-bottom: 2px;
-    margin-right: 200px;
 }
-
 
 .header {
     display: flex;
