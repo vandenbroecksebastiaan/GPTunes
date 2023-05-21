@@ -90,3 +90,4 @@ class LyricsEmbedder:
                 )
                 return response['data'][0]['embedding']
             except openai.error.RateLimitError:
+                print(f"Error in GPT-3 call: Rate limit exceeded. Trying again... {idx}")
