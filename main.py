@@ -7,8 +7,8 @@ openai.api_key = open_ai_key
 from multiprocessing import Pool
 from typing import List, Tuple
 import numpy as np
-import matplotlib.pyplot as plt
 import umap
+import matplotlib.pyplot as plt
 
 from prompts import (
     get_meaning_prompt,
@@ -30,9 +30,6 @@ app = flask.Flask(__name__, template_folder="templates")
 # TODO: make a section "behind the artist" that gives information about the
 #       artist
 
-# IDEA: create an embedding from the lyrics and visualize it against other songs
-
-# Route for displaying the lyrics, this is the homepage
 @app.route("/", methods=["GET", "POST"])
 def home_page() -> str:
     song_name_query = flask.request.args.get('query', 'The world is yours')
@@ -128,66 +125,15 @@ def search_albums() -> str:
     return flask.render_template("album_embedding.html", album_1_name=album_1_name,
                                   album_2_name=album_2_name, search_status="Done")
 
-def get_lyrics_from_album(album_name: str) -> List[Tuple[str, str]]:
-    """Gets the lyrics from an album."""
-    # TODO: delete everything from the lyrics that is not a song
-    from lyricsgenius import Genius
-    access_token = os.environ.get("GENIUS_API_KEY")
-    genius = Genius(access_token, timeout=10, sleep_time=0.1, verbose=True,
-                    retries=5)
-    album = genius.search_album(album_name)
-    print(album.full_title, album.artist)
-    album_json = album.to_json()
-    album_json = json.loads(album_json)
-    album_tracks = album_json["tracks"]
-    album_lyrics = [track["song"]["lyrics"] for track in album_tracks]
-    album_lyrics = ["\n".join([line for line in text.split("\n")
-                    if "[" not in line and "]" not in line])
-                    for text in album_lyrics]
-    album_song_titles = [track["song"]["title"] for track in album_tracks]
-    return album_song_titles, album_lyrics
-
 @app.route("/make-lyric-embedding", methods=["GET", "POST"])
 def make_lyric_embedding_visualization() -> None:
     """Makes the visualization of the embedding."""
-    # Get the lyrics
+    from lyrics2vec import LyricsEmbedder
     global album_1_name, album_2_name
-    album_1_song_names, album_1_lyrics = get_lyrics_from_album(album_1_name)
-    album_2_song_names, album_2_lyrics = get_lyrics_from_album(album_2_name)
-    
-    song_names = album_1_song_names + album_2_song_names
-    album_lyrics = album_1_lyrics + album_2_lyrics
-
-    # Get the embeddings
-    album_embeddings = np.array([_gpt_embedding_call(i) for i in album_lyrics])
-    # Dim reduction
-    red_embeddings = umap.UMAP(n_neighbors=5).fit_transform(album_embeddings)
-    red_embeddings = (red_embeddings - red_embeddings.mean(axis=0))\
-                     / red_embeddings.std(axis=0)
-
-    # Make and save plot
-    fig, ax = plt.subplots(figsize=(7, 7))
-    fig.patch.set_facecolor('white')
-    ax.scatter(red_embeddings[:len(album_1_song_names), 0],
-               red_embeddings[:len(album_1_song_names), 1],
-               c="tab:blue", label=album_1_name)
-    ax.scatter(red_embeddings[len(album_1_song_names):, 0],
-               red_embeddings[len(album_1_song_names):, 1],
-               c="tab:orange", label=album_2_name)
-    ax.set_xticks([])
-    ax.set_yticks([])
-    
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    
-    for x, y, song_name in zip(red_embeddings[:, 0], red_embeddings[:, 1], song_names):
-        ax.annotate(song_name, (x, y), fontsize=8, ha="center", va="bottom", c="white")
-
-    ax.set_title("")
-    plt.savefig("static/images/tsne.png", bbox_inches="tight", dpi=300,
-                transparent=True)
+    embedder = LyricsEmbedder([album_1_name, album_2_name])
+    embedder.get_lyrics()
+    embedder.get_embeddings()
+    embedder.make_visualization()
 
     return flask.jsonify({"status": "success"})
 
@@ -201,6 +147,7 @@ def make_music_embedding_visualization() -> None:
     preview_status = embedder.download_songs()
     print(preview_status)
     if preview_status == "error": return flask.jsonify({"status": "error"})
+    embedder.downsample_songs()
     embedder.to_embedding()
     embedder.reduce_embeddings()
     embedder.make_visualization()
@@ -219,17 +166,6 @@ def _gpt_chat_call(prompt: str, max_tokens: int = 500, model: str = "gpt-3.5-tur
         except openai.error.RateLimitError:
             print(f"Error in GPT-3 call: Rate limit exceeded. Trying again... {idx}")
             
-def _gpt_embedding_call(prompt: List[str], model: str = "text-embedding-ada-002"):
-    for idx in range(10):
-        try:
-            response = openai.Embedding.create(
-                input=prompt,
-                model=model
-            )
-            return response['data'][0]['embedding']
-        except openai.error.RateLimitError:
-            print(f"Error in GPT-3 call: Rate limit exceeded. Trying again... {idx}")
 
 if __name__ == '__main__':
     app.run(debug=True)
-    # get_lyrics_from_album("Yeezus")
