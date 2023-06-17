@@ -44,9 +44,9 @@ class LyricsEmbedder:
         album_embeddings = np.array([self._gpt_embedding_call(i[2]) for i
                                      in self.song_data])
         # Dim reduction
+        album_embeddings = (album_embeddings - album_embeddings.mean(axis=0))\
+                         / album_embeddings.std(axis=0)
         red_embeddings = umap.UMAP(n_neighbors=5).fit_transform(album_embeddings)
-        red_embeddings = (red_embeddings - red_embeddings.mean(axis=0))\
-                         / red_embeddings.std(axis=0)
                          
         for idx in range(len(self.song_data)):
             self.song_data[idx][2] = red_embeddings[idx]

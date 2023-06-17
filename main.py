@@ -24,11 +24,11 @@ app = flask.Flask(__name__, template_folder="templates")
 # TODO: which artists have used iconic lines from the searched song in their own
 #       songs?
 # https://developer.musixmatch.com/documentation/api-reference/matcher-track-get
-# TODO: find the impact of the most iconic lines of the song on the hip hop
-#       community
 # TODO: add song and artist statistics
 # TODO: make a section "behind the artist" that gives information about the
 #       artist
+# TODO: implement a crawl through a graph structure of some sorts and
+#       compare embeddings to find similar songs
 
 @app.route("/", methods=["GET", "POST"])
 def home_page() -> str:
